@@ -1,1 +1,158 @@
+version: '3'
+services:
 
+
+  ecommerce-ui:
+    image: rumburakeclipse/ecommerce-ui:latest
+    container_name: ecommerce-ui
+    depends_on:
+      - shipping-and-handling
+      - contact-support
+      - product-catalog
+      - order-management
+      - product-inventory
+      - profile-management
+    ports:
+      - '4000:4000' 
+    environment:  
+      - REACT_APP_PROFILE_API_HOST=profile-management
+      - REACT_APP_PRODUCT_API_HOST=product-catalog
+      - REACT_APP_INVENTORY_API_HOST=product-inventory
+      - REACT_APP_ORDER_API_HOST=order-management
+      - REACT_APP_SHIPPING_API_HOST=shipping-and-handling
+      - REACT_APP_CONTACT_API_HOST=contact-support
+
+
+  shipping-and-handling:
+    image: rumburakeclipse/shipping-and-handling:latest
+    container_name: shipping-and-handling
+    depends_on:
+      - mongo_shipping
+    ports:
+      - '8080:8080' 
+    environment:  
+      - MONGO_URI=mongodb://mongo_shipping:27017
+
+  mongo_shipping:
+    image: mongo
+    container_name: mongo_shipping
+    volumes:
+      - mongodb_product-catalog_data:/data/db    
+
+  contact-support:
+    image: rumburakeclipse/contact-support-team:latest
+    container_name: contact-support
+    depends_on:
+      - mongodb_contact-support
+    ports:
+      - '8000:8000' 
+    environment:  
+      - MONGODB_HOST=mongodb_contact-support
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=contact-support
+
+
+  mongodb_contact-support:
+    image: mongo
+    container_name: mongodb_contact-support
+    volumes:
+      - mongodb_product-catalog_data:/data/db
+
+  product-catalog:
+    image: rumburakeclipse/product-catalog:latest
+    container_name: product-catalog
+    depends_on:
+      - mongodb_product-catalog
+    ports:
+      - '3001:3001' 
+    environment:  
+      - MONGODB_HOST=mongodb_product-catalog
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=product-catalog
+
+  mongodb_product-catalog:
+    image: mongo
+    container_name: mongodb_product-catalog
+    volumes:
+      - mongodb_product-catalog_data:/data/db
+
+
+  order-management:
+    image: rumburakeclipse/order-management:latest
+    container_name: order-management
+    depends_on:
+      - mongodb_order-management
+    environment:  
+      - PRODUCT_INVENTORY_API_HOST=http://product-inventory
+      - PRODUCT_CATALOG_API_HOST=http://product-catalog
+      - SHIPPING_HANDLING_API_HOST=http://shipping-and-handling
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb_order-management:27017/order_management
+
+
+  mongodb_order-management:
+    image: mongo
+    container_name: mongodb_order-management
+    volumes:
+      - mongodb_order-management_data:/data/db
+
+
+  product-inventory:
+    image: rumburakeclipse/product-inventory:latest
+    container_name: product-inventory
+    ports:
+      - '3002:3002' 
+    depends_on:
+      - postgres_product-inventory
+    environment:
+      - POSTGRES_HOST=postgres_product-inventory
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=product_inventory
+      - POSTGRES_USER=inventory_user
+      - POSTGRES_PASSWORD=inventory_password
+
+
+  postgres_product-inventory:
+    image: 'postgres'
+    container_name: 'postgres_product-inventory'
+    volumes:
+      - postgres_product-inventory_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=product_inventory
+      - POSTGRES_USER=inventory_user
+      - POSTGRES_PASSWORD=inventory_password
+
+
+  profile-management:
+    image: rumburakeclipse/profile-management:latest
+    container_name: profile-management
+    ports:
+      - '3003:3003' 
+    depends_on:
+      - mysql_profile-management
+    environment:
+      - MYSQL_HOST=mysql_profile-management
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=profile_management
+      - MYSQL_USER=profile_user
+      - MYSQL_PASSWORD=profile_password      
+
+
+  mysql_profile-management:
+    image: 'mysql:8.0'
+    container_name: 'mysql_profile-management'
+    volumes:
+      - mysql_profile-management_data:/var/lib/mysql
+    environment:
+      - MYSQL_USER=profile_user
+      - MYSQL_PASSWORD=profile_password
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=profile_management
+
+
+volumes:
+  mongodb_product-catalog_data:
+  mongodb_contact-support_data:
+  mongodb_shipping_data:
+  mongodb_order-management_data:
+  mysql_profile-management_data:
+  postgres_product-inventory_data:
